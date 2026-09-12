@@ -11,6 +11,7 @@ class Post(Base):
     title = Column(String(255), nullable=False, unique=True)
     slug = Column(String(255), nullable=False, unique=True)
     content = Column(Text, nullable=False)
+    status = Column(String(20), nullable=False, default="draft")
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     image_url = Column(Text, nullable=True)

@@ -31,6 +31,7 @@ def get_posts(
 ):
     return (
         db.query(Post)
+        .filter(Post.status == "published")
         .order_by(Post.created_at.desc())
         .offset(offset)
         .limit(limit)
@@ -40,10 +41,25 @@ def get_posts(
 
 @app.get("/posts/{slug}", response_model=PostResponse)
 def get_post_by_slug(slug: str, db: Session = Depends(get_db)):
-    post = db.query(Post).filter(Post.slug == slug).first()
+    post = db.query(Post).filter(Post.slug == slug, Post.status == "published").first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     return post
+
+@app.get("/admin/posts", response_model=list[PostResponse])
+def get_admin_posts(
+    db: Session = Depends(get_db),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    admin=Depends(require_admin),
+):
+    return (
+        db.query(Post)
+        .order_by(Post.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
 
 
 @app.post("/posts", response_model=PostResponse)
@@ -82,6 +98,25 @@ def update_post(
     db.refresh(existing_post)
 
     return existing_post
+
+
+@app.post("/posts/{post_id}/publish", response_model=PostResponse)
+def publish_post(
+    post_id: UUID,
+    db: Session = Depends(get_db),
+    admin=Depends(require_admin),
+):
+    post = db.query(Post).filter(Post.id == post_id).first()
+
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    post.status = "published"
+
+    db.commit()
+    db.refresh(post)
+
+    return post
 
 
 @app.delete("/posts/{post_id}")
