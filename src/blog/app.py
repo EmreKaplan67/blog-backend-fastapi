@@ -78,6 +78,24 @@ def create_post(
 
     return new_post
 
+@app.post("/posts/{post_id}/draft", response_model=PostResponse)
+def save_post_as_draft(
+    post_id: UUID,
+    db: Session = Depends(get_db),
+    admin=Depends(require_admin),
+):
+    post = db.query(Post).filter(Post.id == post_id).first()
+
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    post.status = "draft"
+
+    db.commit()
+    db.refresh(post)
+
+    return post
+
 
 @app.patch("/posts/{post_id}", response_model=PostResponse)
 def update_post(
